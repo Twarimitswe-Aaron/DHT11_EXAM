@@ -1,0 +1,13 @@
+part 1:temp reading and lcd display
+
+read temp data from dht11 using arduino uno
+display data on 16 *2 lcd as follow 
+ristrow candiate name (Aaron)
+second row : temp value
+
+send temp valu fom ardui to the pc via serail communication
+
+2. pc monito and mqtt transimion
+
+write pc side prog tha reads incom tiemp value from arduino
+the pc progr must publish teh recieve temp value to the mqtt broker on teh vps (ip address :)/
