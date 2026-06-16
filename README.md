@@ -1,108 +1,118 @@
-# DHT11 Temperature Monitoring System
+# DHT11 Cloud IoT Monitoring System
 
-This project reads temperature data from a DHT11 sensor using an Arduino Uno, displays it on a 16x2 I2C LCD, and transmits the data over a USB Serial connection to a local PC. The PC runs a full-stack Flask backend that pushes data to an MQTT broker, and streams it live to a web dashboard using WebSockets.
+This project is a fully decoupled, production-ready IoT architecture for reading temperature data from a local DHT11 sensor and broadcasting it to a real-time web dashboard hosted in the cloud.
 
-## System Architecture
+The system is designed with a strict **Separation of Concerns**, ensuring the local hardware is entirely decoupled from the cloud backend.
+
+## 🏗 System Architecture Diagram
 
 ```mermaid
 flowchart LR
-    subgraph Hardware
-        A[DHT11 Sensor] -- Data Pin A0 --> B(Arduino Uno)
-        B -- I2C SDA/SCL --> C[16x2 LCD Display]
+    %% Hardware Tier
+    subgraph Hardware ["Hardware (Local)"]
+        A[DHT11 Sensor] -- Pin A0 --> B(Arduino Uno)
+        B -- I2C --> C[16x2 LCD]
     end
     
-    subgraph Local Environment
-        B -- USB Serial --> D[Flask Backend Server]
-        D -- WebSockets --> G[Web Dashboard Browser]
+    %% Local PC Tier
+    subgraph LocalPC ["Local Bridge (PC)"]
+        B -- USB Serial --> D[pc_client.py]
     end
     
-    subgraph Cloud
-        D -- MQTT Publish --> E((MQTT Broker\n157.173.101.159))
-        E -- MQTT Subscribe --> D
+    %% Cloud Tier
+    subgraph Cloud ["Cloud VPS (157.173.101.159)"]
+        D -- MQTT Publish --> E((MQTT Broker))
+        E -- MQTT Subscribe --> F[server.py Backend]
     end
     
-    classDef hardware fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef local fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef cloud fill:#bfb,stroke:#333,stroke-width:2px;
+    %% Client Tier
+    subgraph Frontend ["Client Browser"]
+        F -- HTTP Polling (1 sec) --> G[Real-time Dashboard]
+    end
+    
+    classDef hardware fill:#f1f5f9,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef local fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a;
+    classDef cloud fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#0f172a;
+    classDef client fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#0f172a;
     
     class A,B,C hardware;
-    class D,G local;
-    class E cloud;
+    class D local;
+    class E,F cloud;
+    class G client;
 ```
 
-## Hardware Setup
+### 🔌 How Communication Works (The O(1) Pathway)
+
+1. **Sensing**: The Arduino Uno continuously reads the DHT11 sensor and writes strings (e.g., `TEMP:24.5`) to the USB Serial port.
+2. **Publishing**: The local script `pc_client.py` auto-detects the Arduino, reads the serial stream, and instantly publishes the temperature to the cloud MQTT broker.
+3. **Subscribing**: The cloud backend `server.py` runs permanently on the VPS. It subscribes to the MQTT broker and securely stores the single latest temperature in memory. **No database (SQLite) is used**, ensuring O(1) lookup speed and zero disk-write bottlenecks.
+4. **Visualizing**: The web dashboard polls the backend's `/api/latest` endpoint every 1 second, dynamically updating a beautifully animated `Chart.js` graph.
+
+---
+
+## 🛠 1. Hardware Setup
 
 ### Wiring Connections
 
 **DHT11 to Arduino Uno**
-- `DHT11 VCC` -> `5V`
-- `DHT11 GND` -> `GND`
-- `DHT11 DATA` -> `A0`
+- `DHT11 VCC` → `5V`
+- `DHT11 GND` → `GND`
+- `DHT11 DATA` → `A0`
 
 **16x2 LCD (with I2C Backpack) to Arduino Uno**
-- `LCD VCC` -> `5V`
-- `LCD GND` -> `GND`
-- `LCD SDA` -> `A4`
-- `LCD SCL` -> `A5`
+- `LCD VCC` → `5V`
+- `LCD GND` → `GND`
+- `LCD SDA` → `A4`
+- `LCD SCL` → `A5`
 
-## 1. Arduino Setup
-
+### Arduino Firmware
 1. Open `arduino_dht11/arduino_dht11.ino` in the Arduino IDE.
-2. Install the required libraries via the Arduino Library Manager:
-   - **DHT sensor library** by Adafruit
-   - **LiquidCrystal I2C** by Frank de Brabander
-3. Connect your Arduino Uno to your PC via USB.
-4. Select your board and COM port in the Arduino IDE.
-5. Click **Upload**.
+2. Install the **DHT sensor library** (by Adafruit) and **LiquidCrystal I2C** (by Frank de Brabander).
+3. Upload the sketch to your board.
 
-*Note: The LCD will display "Aaron - DHT11 Temp Monitoring". Because this text is longer than 16 characters, it will automatically scroll horizontally across the first row.*
+---
 
-## 2. Server & Dashboard Setup (using `venv`)
+## 🚀 2. Local Bridge Setup (Your PC)
 
-The PC acts as the central hub. It runs a Python Flask server (`server.py`) that handles Serial reading, MQTT publishing, and serves the real-time Web Dashboard using Socket.IO.
+The local script's only job is to bridge the USB connection to the internet.
 
-It is highly recommended to run this inside a virtual environment (`venv`).
+1. Ensure the Arduino is plugged into your PC via USB.
+2. Install the required Python packages:
+   ```bash
+   pip install pyserial paho-mqtt
+   ```
+3. Run the publishing script:
+   ```bash
+   python pc_client.py
+   ```
+   *The script will automatically find the Arduino COM port and begin pushing data.*
 
-### Installation Steps
+---
 
-1. Open your terminal in this directory (`/home/twarimitswe_aaron/Documents/exam_dht11`).
-2. Create a new virtual environment:
+## ☁️ 3. Cloud Backend Setup (The VPS)
+
+The backend code strictly runs in the cloud to host the API and website. 
+
+1. SSH into your VPS:
+   ```bash
+   ssh user271@157.173.101.159
+   ```
+2. Set up the environment and install dependencies:
    ```bash
    python3 -m venv venv
+   source venv/bin/activate
+   pip install flask paho-mqtt
    ```
-3. Activate the virtual environment:
-   - On Linux/macOS:
-     ```bash
-     source venv/bin/activate
-     ```
-   - On Windows:
-     ```bash
-     venv\Scripts\activate
-     ```
-4. Install the required Python packages:
+3. Start the server as a background process on port `9271`:
    ```bash
-   pip install pyserial paho-mqtt flask
+   nohup python3 server.py 9271 > server.log 2>&1 &
    ```
 
-### Running the System
+---
 
-Ensure the Arduino is plugged in, and run the server script:
-```bash
-python server.py
-```
+## 📊 4. View the Dashboard
 
-The script will automatically:
-1. Detect the Arduino's COM port and start reading temperature data.
-2. Connect to the MQTT Broker (`157.173.101.159`) to publish data.
-3. Catches its own MQTT messages and instantly broadcasts them to the Web Dashboard.
-4. Host the web server.
+Once both scripts are running, you can access your real-time dashboard from anywhere in the world.
 
-**To view the Dashboard:** Open your web browser and go to `http://127.0.0.1:5000`.
-
-## Troubleshooting
-
-### 1. `[Errno 16] Device or resource busy`
-If you encounter this error when running the Python script, it means another program is actively using the USB serial port. **You must close the Arduino IDE's Serial Monitor** (or the entire Arduino IDE) before running the Python script. Only one program can connect to the serial port at a time.
-
-### 2. `ValueError: Unsupported callback API version`
-This error occurs if you are using an older version of the Python script with `paho-mqtt` version 2.0.0+. The script in this repository has already been updated to include `mqtt.CallbackAPIVersion.VERSION1` in the client initialization to resolve this issue.
+Open your browser (preferably an Incognito Window to prevent AdBlocker interference) and navigate to:
+**http://157.173.101.159:9271**
