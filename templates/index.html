@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHT11 Dashboard</title>
+    <style>
+        body {
+            background-color: #181a1b;
+            color: #e8e6e3;
+            margin: 0;
+            height: 100vh;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .css-g5y9jx {
+            display: flex;
+            box-sizing: border-box;
+            position: relative;
+            flex-direction: column;
+            border: 0 solid black;
+            margin: 0;
+            padding: 0;
+        }
+        .css-146c3p1 {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .orbitron {
+            text-shadow: rgba(99, 102, 241, 0.6) 0px 0px 12px;
+            font-family: Orbitron, sans-serif;
+            font-size: 52px;
+            letter-spacing: 3px;
+            font-weight: bold;
+        }
+        .blink {
+            animation: blinker 1s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0.2; }
+        }
+        .chart-container {
+            position: relative;
+            height: 150px;
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+    <!-- Orbitron Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="root" style="width: 100%; max-width: 400px; padding: 20px;">
+        <div class="css-g5y9jx" style="flex: 1 1 0%;">
+            
+            <!-- HEADER -->
+            <div class="css-g5y9jx" style="align-items: center; margin-bottom: 30px;">
+                <div class="css-146c3p1" style="text-align: center;">
+                    <span class="orbitron" style="color: rgb(255, 255, 255);">DHT11</span>
+                    <span class="orbitron" style="color: rgb(129, 140, 248);">.IO</span>
+                </div>
+                <div class="css-146c3p1" style="color: #aaa297; font-size: 12px; margin-top: 5px;">
+                    Secure · Real-time · IoT Sensor
+                </div>
+            </div>
+
+            <!-- SENSOR CARD -->
+            <div class="css-g5y9jx" style="background-color: #0a0a12; border: 1px solid #1f2937; margin-bottom: 20px; padding: 16px;">
+                <div class="css-g5y9jx" style="flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div class="css-146c3p1" style="color: #8888aa; font-size: 10px; letter-spacing: 2px;">
+                        TEMP SENSOR STATUS
+                    </div>
+                    <div class="css-g5y9jx" style="flex-direction: row; align-items: center; gap: 5px;">
+                        <div id="status-dot" class="css-g5y9jx" style="width: 6px; height: 6px; border-radius: 3px; background-color: rgb(245, 158, 11);"></div>
+                        <div id="status-text" class="css-146c3p1" style="color: #8888aa; font-size: 9px; letter-spacing: 1px;">
+                            CONNECTING TO API...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE READING ROW -->
+                <div class="css-g5y9jx" style="flex-direction: row; align-items: center; background-color: #12121a; border: 1px solid rgba(34, 197, 94, 0.3); padding: 16px; margin-top: 10px; gap: 10px;">
+                    <div class="css-g5y9jx blink" style="width: 8px; height: 8px; border-radius: 4px; background-color: rgb(34, 197, 94);"></div>
+                    <div class="css-146c3p1" style="color: #aaa297; font-size: 12px; font-family: monospace; flex: 1 1 0%;">
+                        TEMP_LIVE
+                    </div>
+                    <div id="temp-value" class="css-146c3p1" style="color: rgb(34, 197, 94); font-size: 18px; font-weight: bold;">
+                        --.- °C
+                    </div>
+                    <div id="temp-time" class="css-146c3p1" style="color: #aaa297; font-size: 10px; min-width: 50px; text-align: right;">
+                        Wait...
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATS ROW -->
+            <div class="css-g5y9jx" style="flex-direction: row; gap: 10px; margin-bottom: 24px;">
+                <div class="css-g5y9jx" style="flex: 1 1 0%; background-color: #0a0a12; border: 1px solid #1f2937; padding: 12px; align-items: center;">
+                    <div class="css-146c3p1" style="color: rgb(34, 197, 94); font-size: 13px; font-weight: bold;">1 SEC</div>
+                    <div class="css-146c3p1" style="color: #8888aa; font-size: 9px; letter-spacing: 1px; margin-top: 3px;">REFRESH</div>
+                </div>
+                <div class="css-g5y9jx" style="flex: 1 1 0%; background-color: #0a0a12; border: 1px solid #1f2937; padding: 12px; align-items: center;">
+                    <div class="css-146c3p1" style="color: rgb(99, 102, 241); font-size: 13px; font-weight: bold;">REST</div>
+                    <div class="css-146c3p1" style="color: #8888aa; font-size: 9px; letter-spacing: 1px; margin-top: 3px;">LIVE API</div>
+                </div>
+                <div class="css-g5y9jx" style="flex: 1 1 0%; background-color: #0a0a12; border: 1px solid #1f2937; padding: 12px; align-items: center;">
+                    <div class="css-146c3p1" style="color: rgb(245, 158, 11); font-size: 13px; font-weight: bold;">O(1)</div>
+                    <div class="css-146c3p1" style="color: #8888aa; font-size: 9px; letter-spacing: 1px; margin-top: 3px;">PATHWAY</div>
+                </div>
+            </div>
+
+            <!-- LIVE GRAPH -->
+            <div class="css-g5y9jx" style="background-color: #0a0a12; border: 1px solid #1f2937;">
+                <div class="css-g5y9jx" style="flex-direction: row; justify-content: space-between; border-bottom: 1px solid #1f2937; padding: 12px 16px;">
+                    <span style="color: #8888aa; font-size: 10px; letter-spacing: 2px;">REAL-TIME GRAPH</span>
+                </div>
+                <div class="chart-container" style="padding: 10px;">
+                    <canvas id="tempChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const tempValueEl = document.getElementById('temp-value');
+        const tempTimeEl = document.getElementById('temp-time');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // --- Chart.js Setup ---
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        const maxDataPoints = 20; 
+        
+        const tempChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array(maxDataPoints).fill(''),
+                datasets: [{
+                    label: 'Temperature °C',
+                    data: Array(maxDataPoints).fill(null),
+                    borderColor: 'rgb(34, 197, 94)', 
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 0, 
+                    tension: 0.4, 
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 600, // Best smooth sliding animation
+                    easing: 'easeOutQuart'
+                },
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        display: false 
+                    },
+                    y: {
+                        display: true,
+                        grid: {
+                            color: '#1f2937',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#8888aa',
+                            font: { size: 9 },
+                            stepSize: 0.5
+                        },
+                        suggestedMin: 20,
+                        suggestedMax: 30
+                    }
+                }
+            }
+        });
+
+        // --- Fetch API Setup ---
+        async function fetchLatest() {
+            try {
+                const response = await fetch('/api/latest');
+                if (!response.ok) throw new Error("Backend error");
+                
+                const data = await response.json();
+                
+                if (data.temperature !== "--.-") {
+                    const temp = parseFloat(data.temperature);
+                    
+                    // Update UI text
+                    tempValueEl.innerText = temp.toFixed(1) + " °C";
+                    tempTimeEl.innerText = data.timestamp;
+                    
+                    // Update Graph
+                    const chartData = tempChart.data.datasets[0].data;
+                    const chartLabels = tempChart.data.labels;
+                    
+                    chartData.shift();
+                    chartLabels.shift();
+                    
+                    chartData.push(temp);
+                    chartLabels.push(data.timestamp);
+                    
+                    tempChart.update();
+                }
+                
+                statusDot.style.backgroundColor = "rgb(34, 197, 94)"; // Green
+                statusText.innerText = "CONNECTED TO API";
+                statusText.style.color = "rgb(34, 197, 94)";
+            } catch (err) {
+                console.error(err);
+                statusDot.style.backgroundColor = "rgb(239, 68, 68)"; // Red
+                statusText.innerText = "API DISCONNECTED";
+                statusText.style.color = "rgb(239, 68, 68)";
+            }
+        }
+
+        // Poll exactly every 1 second as requested
+        setInterval(fetchLatest, 1000);
+        
+        // Initial fetch
+        fetchLatest();
+    </script>
+</body>
+</html>
